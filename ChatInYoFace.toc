@@ -1,0 +1,8 @@
+## Interface: 120000
+## Title: ChatInYoFace
+## Notes: Show chat messages in the middle of your screen
+## Author: ChatInYoFace
+## Version: 1.0.0
+## SavedVariables: ChatInYoFaceDB
+
+ChatInYoFace.lua
