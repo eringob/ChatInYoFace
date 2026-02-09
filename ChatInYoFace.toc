@@ -2,7 +2,12 @@
 ## Title: ChatInYoFace
 ## Notes: Show chat messages in the middle of your screen
 ## Author: ChatInYoFace
-## Version: 1.0.0
+## Version: 1.2.0
 ## SavedVariables: ChatInYoFaceDB
+## OptionalDeps: LibStub, LibSharedMedia-3.0
+
+Libs\LibSharedMedia-3.0\LibStub\LibStub.lua
+Libs\LibSharedMedia-3.0\CallbackHandler-1.0\CallbackHandler-1.0.lua
+Libs\LibSharedMedia-3.0\lib.xml
 
 ChatInYoFace.lua
