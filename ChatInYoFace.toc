@@ -2,7 +2,7 @@
 ## Title: ChatInYoFace
 ## Notes: Show chat messages in the middle of your screen
 ## Author: ChatInYoFace
-## Version: 1.2.0
+## Version: 1.2.1
 ## SavedVariables: ChatInYoFaceDB
 ## OptionalDeps: LibStub, LibSharedMedia-3.0
 
