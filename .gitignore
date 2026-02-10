@@ -1,0 +1,3 @@
+# Keep repository metadata visible for export/pull tooling.
+!.git/
+.gitattributes
