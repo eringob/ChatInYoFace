@@ -480,7 +480,12 @@ local function EnsureHideHook(frame)
     frame.cifHideHooked = true
     hooksecurefunc(frame, "Show", function(f)
         if ChatInYoFaceDB and ChatInYoFaceDB.hideChatFrame then
-            f:Hide()
+            if f.SetAlpha then
+                f:SetAlpha(0)
+            end
+            if f.EnableMouse then
+                f:EnableMouse(false)
+            end
         end
     end)
 end
@@ -496,14 +501,22 @@ local function SetFrameHidden(frame, hidden)
         if frame.cifPrevAlpha == nil then
             frame.cifPrevAlpha = frame:GetAlpha()
         end
+        if frame.cifPrevMouse == nil and frame.IsMouseEnabled then
+            frame.cifPrevMouse = frame:IsMouseEnabled()
+        end
         frame:SetAlpha(0)
-        frame:Hide()
+        if frame.EnableMouse then
+            frame:EnableMouse(false)
+        end
     else
         if frame.cifPrevAlpha ~= nil then
             frame:SetAlpha(frame.cifPrevAlpha)
             frame.cifPrevAlpha = nil
         end
-        frame:Show()
+        if frame.cifPrevMouse ~= nil and frame.EnableMouse then
+            frame:EnableMouse(frame.cifPrevMouse)
+            frame.cifPrevMouse = nil
+        end
     end
 end
 
@@ -548,7 +561,6 @@ local function SetTabHidden(tab, hidden)
         end
         ApplyRegionAlpha(0)
         tab:EnableMouse(false)
-        tab:Hide()
     else
         if tab.cifPrevAlpha ~= nil then
             tab:SetAlpha(tab.cifPrevAlpha)
@@ -570,7 +582,6 @@ local function SetTabHidden(tab, hidden)
             tab.cifRegionAlpha = nil
         end
         tab:EnableMouse(true)
-        tab:Show()
     end
 end
 
