@@ -23,9 +23,12 @@ local DEFAULTS = {
         CHAT_MSG_RAID = true,
         CHAT_MSG_RAID_LEADER = true,
         CHAT_MSG_RAID_WARNING = true,
+        CHAT_MSG_LOOT = true,
+        CHAT_MSG_SYSTEM = true,
         CHAT_MSG_GUILD = true,
         CHAT_MSG_OFFICER = true,
         CHAT_MSG_CHANNEL = true,
+        CHAT_MSG_COMMUNITIES_CHANNEL = true,
         CHAT_MSG_INSTANCE_CHAT = true,
         CHAT_MSG_INSTANCE_CHAT_LEADER = true,
     },
@@ -49,7 +52,12 @@ local BASE_CHANNEL_LIST = {
     { key = "CHAT_MSG_RAID", label = "Raid" },
     { key = "CHAT_MSG_RAID_LEADER", label = "Raid Leader" },
     { key = "CHAT_MSG_RAID_WARNING", label = "Raid Warning" },
+    { key = "CHAT_MSG_LOOT", label = "Item Loot" },
+    { key = "CHAT_MSG_SYSTEM", label = "System Messages" },
+    { key = "CHAT_MSG_GUILD", label = "Guild" },
+    { key = "CHAT_MSG_OFFICER", label = "Officer" },
     { key = "GUILD_MOTD", label = "GMotD" },
+    { key = "CHAT_MSG_COMMUNITIES_CHANNEL", label = "Communities" },
     { key = "CHAT_MSG_INSTANCE_CHAT", label = "Instance" },
     { key = "CHAT_MSG_INSTANCE_CHAT_LEADER", label = "Instance Leader" },
 }
@@ -308,11 +316,34 @@ local function BuildChannelList()
     local entries = {}
     local seenKeys = {}
     local seenLabels = {}
+    local excludedLabels = {}
+    local guildLabelPrefix
+    if GetGuildInfo then
+        local guildName = GetGuildInfo("player")
+        if guildName and guildName ~= "" then
+            excludedLabels[guildName:lower()] = true
+            local escaped = guildName:gsub("(%W)", "%%%1")
+            guildLabelPrefix = "^" .. escaped:lower() .. "%s*%-%s*"
+        end
+    end
+
     local function AddEntry(entry)
         if not entry or not entry.key or not entry.label then
             return
         end
         local labelKey = entry.label:lower()
+        if labelKey:match("^guild%s*%-") or labelKey:match("^communities%s*%-") then
+            return
+        end
+        if guildLabelPrefix and labelKey:match(guildLabelPrefix .. "guild$") then
+            return
+        end
+        if guildLabelPrefix and labelKey:match(guildLabelPrefix .. "officer$") then
+            return
+        end
+        if excludedLabels[labelKey] then
+            return
+        end
         if EXCLUDED_CHANNEL_LABELS[labelKey] then
             return
         end
@@ -740,6 +771,43 @@ local function GetMaxLineWidth()
     return math.floor(GetScreenWidth() * 0.25)
 end
 
+local function GetChatPrefix(event, displayChannelName, channelNumber)
+    if event == "CHAT_MSG_LOOT" or event == "CHAT_MSG_SYSTEM" then
+        return nil
+    end
+    if event == "CHAT_MSG_COMMUNITIES_CHANNEL" and displayChannelName and displayChannelName ~= "" then
+        return displayChannelName
+    end
+    if event == "CHAT_MSG_CHANNEL" then
+        if channelNumber and tonumber(channelNumber) then
+            return tostring(channelNumber)
+        end
+        if displayChannelName and displayChannelName ~= "" then
+            return displayChannelName
+        end
+    end
+    if event == "CHAT_MSG_GUILD" then
+        return "G"
+    end
+    if event == "CHAT_MSG_OFFICER" then
+        return "O"
+    end
+
+    local chatType = event:match("^CHAT_MSG_(.+)$")
+    if chatType then
+        local label = _G["CHAT_" .. chatType]
+        if type(label) == "string" and label ~= "" then
+            label = label:gsub("%s*:%s*$", "")
+            if label ~= "" then
+                return label
+            end
+        end
+        return chatType:gsub("_", " ")
+    end
+
+    return nil
+end
+
 local function CreateLine(messageFrame)
     local line = messageFrame:CreateFontString(nil, "OVERLAY")
     ApplyFont(line)
@@ -836,6 +904,25 @@ local function UpdateFade(messageFrame)
     end
 end
 
+local function IsPlayerSender(sender)
+    if not sender or sender == "" then
+        return false
+    end
+
+    local shortSender = Ambiguate and Ambiguate(sender, "short") or sender
+    local playerName, playerRealm = UnitFullName and UnitFullName("player") or nil
+    if not playerName then
+        return false
+    end
+
+    if playerRealm and playerRealm ~= "" then
+        local fullName = playerName .. "-" .. playerRealm
+        return sender == fullName or shortSender == playerName
+    end
+
+    return shortSender == playerName or sender == playerName
+end
+
 local function HandleChatEvent(messageFrame, event, ...)
     if not event or not event:match("^CHAT_MSG_") then
         return
@@ -864,18 +951,25 @@ local function HandleChatEvent(messageFrame, event, ...)
     end
 
     local display = msg
-    if sender and sender ~= "" then
+    if event ~= "CHAT_MSG_LOOT" and sender and sender ~= "" and not IsPlayerSender(sender) then
         display = string.format("%s: %s", sender, msg)
+    end
+
+    if event == "CHAT_MSG_LOOT" then
+        local itemId = msg and msg:match("item:(%d+)")
+        if itemId and GetItemInfoInstant then
+            local _, _, _, _, icon = GetItemInfoInstant(tonumber(itemId))
+            if icon then
+                display = string.format("|T%s:40:40:0:0|t %s", icon, display)
+            end
+        end
     end
 
     local r, g, b = GetChatColor(event, channelNumber)
 
-    if event == "CHAT_MSG_CHANNEL" and displayChannelName and displayChannelName ~= "" then
-        display = string.format("[%s] %s", displayChannelName, display)
-    end
-
-    if event == "CHAT_MSG_COMMUNITIES_CHANNEL" and displayChannelName and displayChannelName ~= "" then
-        display = string.format("[%s] %s", displayChannelName, display)
+    local prefix = GetChatPrefix(event, displayChannelName, channelNumber)
+    if prefix and prefix ~= "" then
+        display = string.format("%s: %s", prefix, display)
     end
 
     PlayChannelSound(channelKey)
@@ -1593,6 +1687,8 @@ local function RegisterChatEvents(frame)
         "CHAT_MSG_RAID",
         "CHAT_MSG_RAID_LEADER",
         "CHAT_MSG_RAID_WARNING",
+        "CHAT_MSG_LOOT",
+        "CHAT_MSG_SYSTEM",
         "CHAT_MSG_GUILD",
         "CHAT_MSG_OFFICER",
         "CHAT_MSG_CHANNEL",

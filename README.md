@@ -17,6 +17,13 @@ ChatInYoFace listens to selected chat events and mirrors those messages into a c
 - /cif time <1-30> — set seconds on screen.
 
 ## Changelog
+### 1.2.1
+- Add Loot and System channel options.
+- Add per-community channel options plus top-level Communities toggle.
+- Prefix chat messages with their channel label or number (excluding Loot/System).
+- Show item icons for Loot messages.
+- Filter guild-name channel duplicates from the channel options.
+
 ### 1.2.0
 - Persistently hide the original chat frame across UI reloads.
 - Keep chat tabs hidden while allowing the active edit box for input.
