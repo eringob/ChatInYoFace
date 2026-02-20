@@ -1,41 +1,18 @@
-# ChatInYoFace
-Show your chat messages in the middle of your screen.
+# Changelog
 
-## How It Works
-ChatInYoFace listens to selected chat events and mirrors those messages into a custom on-screen message frame. You can choose which channels appear, adjust font styling, size, line count, and display duration, and optionally play a sound per channel. The addon can also hide the original chat frame while keeping the active edit box available for typing.
-
-## Install
-1. Copy this folder to your WoW AddOns directory as ChatInYoFace.
-2. Restart the game or reload the UI.
-
-## Usage
-- /cif unlock — show the anchor and drag it.
-- /cif lock — hide the anchor.
-- /cif font <path> — set the font file path.
-- /cif size <8-64> — set font size.
-- /cif lines <1-20> — set number of lines.
-- /cif time <1-30> — set seconds on screen.
-- /cif debug — log channel details for 60 seconds.
-
-## Options Panel
-- Loot icon size slider.
-- Message frame width and height sliders with a temporary size preview border.
-- Arrow buttons next to sliders for stepwise adjustments.
-
-## Changelog
-### 1.3.0
+## 1.3.0
 - Add sliders for loot icon size and message frame width/height.
 - Add arrow buttons for stepwise slider adjustments.
 - Show a temporary border when resizing the message frame.
 
-### 1.2.1
+## 1.2.1
 - Add Loot and System channel options.
 - Add per-community channel options plus top-level Communities toggle.
 - Prefix chat messages with their channel label or number (excluding Loot/System).
 - Show item icons for Loot messages.
 - Filter guild-name channel duplicates from the channel options.
 
-### 1.2.0
+## 1.2.0
 - Persistently hide the original chat frame across UI reloads.
 - Keep chat tabs hidden while allowing the active edit box for input.
 - Prevent stray edit boxes from lingering when toggling chat visibility.
@@ -43,7 +20,7 @@ ChatInYoFace listens to selected chat events and mirrors those messages into a c
 - Make outline text more visible with thicker outlines.
 - Keep dropdown text legible by placing the backdrop behind labels.
 
-### 1.1.0
+## 1.1.0
 - Options panel refresh and styling updates.
 - ElvUI-like dropdown/slider styling and anchor styling.
 - Per-channel sounds with preview.
