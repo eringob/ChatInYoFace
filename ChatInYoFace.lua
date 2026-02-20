@@ -12,6 +12,9 @@ local DEFAULTS = {
     lines = 6,
     time = 6,
     spacing = 2,
+    frameWidth = 600,
+    frameHeight = 400,
+    lootIconSize = 40,
     hideChatFrame = false,
     channels = {
         CHAT_MSG_SAY = true,
@@ -498,9 +501,76 @@ end
 local function CreateMessageFrame(anchor)
     local frame = CreateFrame("Frame", nil, UIParent)
     frame:SetPoint("TOP", anchor, "BOTTOM", 0, -4)
-    frame:SetSize(600, 400)
+    local width = (ChatInYoFaceDB and ChatInYoFaceDB.frameWidth) or 600
+    local height = (ChatInYoFaceDB and ChatInYoFaceDB.frameHeight) or 400
+    frame:SetSize(width, height)
     frame.lines = {}
     return frame
+end
+
+local function EnsureMessageFrameBorder(frame)
+    if not frame or frame.cifBorder then
+        return
+    end
+
+    frame.cifBorder = true
+
+    frame.cifBorderTop = frame:CreateTexture(nil, "OVERLAY")
+    frame.cifBorderTop:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
+    frame.cifBorderTop:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, 0)
+    frame.cifBorderTop:SetHeight(1)
+    frame.cifBorderTop:SetColorTexture(0.2, 0.8, 0.9, 0.9)
+
+    frame.cifBorderBottom = frame:CreateTexture(nil, "OVERLAY")
+    frame.cifBorderBottom:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 0)
+    frame.cifBorderBottom:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+    frame.cifBorderBottom:SetHeight(1)
+    frame.cifBorderBottom:SetColorTexture(0.2, 0.8, 0.9, 0.9)
+
+    frame.cifBorderLeft = frame:CreateTexture(nil, "OVERLAY")
+    frame.cifBorderLeft:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
+    frame.cifBorderLeft:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 0)
+    frame.cifBorderLeft:SetWidth(1)
+    frame.cifBorderLeft:SetColorTexture(0.2, 0.8, 0.9, 0.9)
+
+    frame.cifBorderRight = frame:CreateTexture(nil, "OVERLAY")
+    frame.cifBorderRight:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, 0)
+    frame.cifBorderRight:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+    frame.cifBorderRight:SetWidth(1)
+    frame.cifBorderRight:SetColorTexture(0.2, 0.8, 0.9, 0.9)
+
+    frame.cifBorderTop:Hide()
+    frame.cifBorderBottom:Hide()
+    frame.cifBorderLeft:Hide()
+    frame.cifBorderRight:Hide()
+end
+
+local function ShowMessageFrameBorder(frame, duration)
+    if not frame then
+        return
+    end
+
+    EnsureMessageFrameBorder(frame)
+
+    frame.cifBorderToken = (frame.cifBorderToken or 0) + 1
+    local token = frame.cifBorderToken
+
+    frame.cifBorderTop:Show()
+    frame.cifBorderBottom:Show()
+    frame.cifBorderLeft:Show()
+    frame.cifBorderRight:Show()
+
+    if C_Timer and C_Timer.After then
+        C_Timer.After(duration or 1.5, function()
+            if frame.cifBorderToken ~= token then
+                return
+            end
+            frame.cifBorderTop:Hide()
+            frame.cifBorderBottom:Hide()
+            frame.cifBorderLeft:Hide()
+            frame.cifBorderRight:Hide()
+        end)
+    end
 end
 
 local function EnsureHideHook(frame)
@@ -960,7 +1030,8 @@ local function HandleChatEvent(messageFrame, event, ...)
         if itemId and GetItemInfoInstant then
             local _, _, _, _, icon = GetItemInfoInstant(tonumber(itemId))
             if icon then
-                display = string.format("|T%s:40:40:0:0|t %s", icon, display)
+                local iconSize = ChatInYoFaceDB.lootIconSize or 40
+                display = string.format("|T%s:%d:%d:0:0|t %s", icon, iconSize, iconSize, display)
             end
         end
     end
@@ -1229,6 +1300,55 @@ local function CreateOptionsPanel(anchor, messageFrame)
             thumb:SetTexture("Interface\\Buttons\\UI-ScrollBar-Knob")
             thumb:SetVertexColor(0.2, 0.8, 0.9)
         end
+
+        if not slider.cifArrowButtons then
+            slider.cifArrowButtons = true
+
+            local function StepSlider(delta)
+                local minValue, maxValue = slider:GetMinMaxValues()
+                local step = slider.GetValueStep and slider:GetValueStep() or 1
+                if not step or step == 0 then
+                    step = 1
+                end
+                local value = slider:GetValue() or minValue or 0
+                local newValue = value + (delta * step)
+                if minValue ~= nil and newValue < minValue then
+                    newValue = minValue
+                end
+                if maxValue ~= nil and newValue > maxValue then
+                    newValue = maxValue
+                end
+                slider:SetValue(newValue)
+            end
+
+            slider.arrowLeft = CreateFrame("Button", nil, slider)
+            slider.arrowLeft:SetSize(18, 18)
+            slider.arrowLeft:SetPoint("LEFT", slider, "LEFT", 2, 0)
+            slider.arrowLeft:SetFrameStrata(slider:GetFrameStrata())
+            slider.arrowLeft:SetFrameLevel((slider:GetFrameLevel() or 0) + 2)
+            slider.arrowLeft:SetNormalTexture("Interface\\Buttons\\UI-Spellbook-PrevPageButton-Up")
+            slider.arrowLeft:SetPushedTexture("Interface\\Buttons\\UI-Spellbook-PrevPageButton-Down")
+            slider.arrowLeft:SetHighlightTexture("Interface\\Buttons\\UI-Spellbook-PrevPageButton-Highlight", "ADD")
+            slider.arrowLeft:SetNormalFontObject("GameFontNormal")
+            slider.arrowLeft:SetText("<")
+            slider.arrowLeft:SetScript("OnClick", function()
+                StepSlider(-1)
+            end)
+
+            slider.arrowRight = CreateFrame("Button", nil, slider)
+            slider.arrowRight:SetSize(18, 18)
+            slider.arrowRight:SetPoint("RIGHT", slider, "RIGHT", -2, 0)
+            slider.arrowRight:SetFrameStrata(slider:GetFrameStrata())
+            slider.arrowRight:SetFrameLevel((slider:GetFrameLevel() or 0) + 2)
+            slider.arrowRight:SetNormalTexture("Interface\\Buttons\\UI-Spellbook-NextPageButton-Up")
+            slider.arrowRight:SetPushedTexture("Interface\\Buttons\\UI-Spellbook-NextPageButton-Down")
+            slider.arrowRight:SetHighlightTexture("Interface\\Buttons\\UI-Spellbook-NextPageButton-Highlight", "ADD")
+            slider.arrowRight:SetNormalFontObject("GameFontNormal")
+            slider.arrowRight:SetText(">")
+            slider.arrowRight:SetScript("OnClick", function()
+                StepSlider(1)
+            end)
+        end
     end
 
     local function StyleButton(button)
@@ -1367,8 +1487,95 @@ local function CreateOptionsPanel(anchor, messageFrame)
         end
     end)
 
+    local iconSizeSlider = CreateFrame("Slider", "ChatInYoFaceIconSizeSlider", content, "OptionsSliderTemplate")
+    iconSizeSlider:SetPoint("TOPLEFT", timeSlider, "BOTTOMLEFT", 0, -24)
+    StyleSlider(iconSizeSlider)
+    iconSizeSlider:SetMinMaxValues(12, 80)
+    iconSizeSlider:SetValueStep(1)
+    iconSizeSlider:SetObeyStepOnDrag(true)
+    iconSizeSlider.Text:SetText("Loot Icon Size")
+    iconSizeSlider.Low:SetText("12")
+    iconSizeSlider.High:SetText("80")
+    iconSizeSlider:SetScript("OnValueChanged", function(self, value)
+        value = math.floor(value + 0.5)
+        ChatInYoFaceDB.lootIconSize = value
+        self:SetValue(value)
+    end)
+    iconSizeSlider:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Loot Icon Size: " .. math.floor(self:GetValue() + 0.5))
+    end)
+    iconSizeSlider:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+    iconSizeSlider:HookScript("OnValueChanged", function(self)
+        if GameTooltip:IsOwned(self) then
+            GameTooltip:SetText("Loot Icon Size: " .. math.floor(self:GetValue() + 0.5))
+        end
+    end)
+
+    local widthSlider = CreateFrame("Slider", "ChatInYoFaceFrameWidthSlider", content, "OptionsSliderTemplate")
+    widthSlider:SetPoint("TOPLEFT", iconSizeSlider, "BOTTOMLEFT", 0, -24)
+    StyleSlider(widthSlider)
+    widthSlider:SetMinMaxValues(200, 1200)
+    widthSlider:SetValueStep(10)
+    widthSlider:SetObeyStepOnDrag(true)
+    widthSlider.Text:SetText("Frame Width")
+    widthSlider.Low:SetText("200")
+    widthSlider.High:SetText("1200")
+    widthSlider:SetScript("OnValueChanged", function(self, value)
+        value = math.floor(value + 0.5)
+        ChatInYoFaceDB.frameWidth = value
+        self:SetValue(value)
+        messageFrame:SetSize(value, ChatInYoFaceDB.frameHeight or messageFrame:GetHeight())
+        LayoutLines(messageFrame)
+        ShowMessageFrameBorder(messageFrame, 1.5)
+    end)
+    widthSlider:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Frame Width: " .. math.floor(self:GetValue() + 0.5))
+    end)
+    widthSlider:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+    widthSlider:HookScript("OnValueChanged", function(self)
+        if GameTooltip:IsOwned(self) then
+            GameTooltip:SetText("Frame Width: " .. math.floor(self:GetValue() + 0.5))
+        end
+    end)
+
+    local heightSlider = CreateFrame("Slider", "ChatInYoFaceFrameHeightSlider", content, "OptionsSliderTemplate")
+    heightSlider:SetPoint("TOPLEFT", widthSlider, "BOTTOMLEFT", 0, -24)
+    StyleSlider(heightSlider)
+    heightSlider:SetMinMaxValues(100, 800)
+    heightSlider:SetValueStep(10)
+    heightSlider:SetObeyStepOnDrag(true)
+    heightSlider.Text:SetText("Frame Height")
+    heightSlider.Low:SetText("100")
+    heightSlider.High:SetText("800")
+    heightSlider:SetScript("OnValueChanged", function(self, value)
+        value = math.floor(value + 0.5)
+        ChatInYoFaceDB.frameHeight = value
+        self:SetValue(value)
+        messageFrame:SetSize(ChatInYoFaceDB.frameWidth or messageFrame:GetWidth(), value)
+        LayoutLines(messageFrame)
+        ShowMessageFrameBorder(messageFrame, 1.5)
+    end)
+    heightSlider:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Frame Height: " .. math.floor(self:GetValue() + 0.5))
+    end)
+    heightSlider:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+    heightSlider:HookScript("OnValueChanged", function(self)
+        if GameTooltip:IsOwned(self) then
+            GameTooltip:SetText("Frame Height: " .. math.floor(self:GetValue() + 0.5))
+        end
+    end)
+
     local channelsLabel = content:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    channelsLabel:SetPoint("TOPLEFT", timeSlider, "BOTTOMLEFT", 0, -18)
+    channelsLabel:SetPoint("TOPLEFT", heightSlider, "BOTTOMLEFT", 0, -18)
     channelsLabel:SetText("Chat Channels")
     StyleSectionHeader(channelsLabel)
 
@@ -1586,6 +1793,9 @@ local function CreateOptionsPanel(anchor, messageFrame)
         sizeSlider:SetValue(ChatInYoFaceDB.size)
         outlineCheck:SetChecked(ChatInYoFaceDB.outline ~= nil and ChatInYoFaceDB.outline ~= "")
         timeSlider:SetValue(ChatInYoFaceDB.time)
+        iconSizeSlider:SetValue(ChatInYoFaceDB.lootIconSize or 40)
+        widthSlider:SetValue(ChatInYoFaceDB.frameWidth or messageFrame:GetWidth() or 600)
+        heightSlider:SetValue(ChatInYoFaceDB.frameHeight or messageFrame:GetHeight() or 400)
 
         for _, entry in ipairs(channelList) do
             local check = channelChecks[entry.key]
